@@ -73,13 +73,9 @@ def scrape_youtube(query: str, keywords: list, max_videos: int = 10):
     
     all_feedback = []
     for video_id in video_ids:
-        # --- TRANSCRIPT SCRAPING IS NOW REMOVED ---
-        # transcript = _get_transcript(video_id)
-        # if transcript:
-        #     all_feedback.append(...)
             
         comments = _get_comments(youtube, video_id, keywords)
         all_feedback.extend(comments)
 
-    print(f"✅ YouTube scraping complete. Found {len(all_feedback)} total comments.")
+    print(f" YouTube scraping complete. Found {len(all_feedback)} total comments.")
     return all_feedback
