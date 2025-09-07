@@ -113,7 +113,7 @@ def run_full_ingest(vector_store: VectorStore):
 
         print(f"\n--- Data Collection Complete: Found {len(all_feedback)} items ---")
         process_and_store(all_feedback, db_session, vector_store)
-        print("\n✅ Ingestion pipeline finished successfully.")
+        print("\n Ingestion pipeline finished successfully.")
 
     finally:
         db_session.close()
