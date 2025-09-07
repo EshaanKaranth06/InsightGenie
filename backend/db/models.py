@@ -1,4 +1,4 @@
-# backend/db/models.py
+
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, JSON
 from sqlalchemy.orm import sessionmaker, declarative_base
 from datetime import datetime
