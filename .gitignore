@@ -1,0 +1,39 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.env
+
+# --- Virtual environments ---
+venv/
+.env/
+.envrc
+.venv/
+.venv*/
+
+# --- Databases & Large Files ---
+*.db
+*.sqlite3
+*.pkl
+*.bin
+
+# --- Logs & Temp ---
+*.log
+*.tmp
+*.swp
+*.bak
+*.pid
+
+# --- System Files ---
+.DS_Store
+Thumbs.db
+
+# --- IDE/Editor ---
+.vscode/
+.idea/
+
+# --- Node/Frontend ---
+node_modules/
+dist/
+build/
