@@ -1,4 +1,4 @@
-# A simple script to initialize the database schema
+
 from sqlalchemy import create_engine
 from db.models import Base
 import os
