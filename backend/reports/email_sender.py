@@ -62,8 +62,7 @@ def send_email(subject: str, body_html: str, recipients: list, attachment_path: 
         return False
 
 if __name__ == "__main__":
-    # --- Example Usage ---
-    # This allows you to test the script directly
+    
     print("Running email sender test...")
     
     # 1. Create a dummy report file to attach
