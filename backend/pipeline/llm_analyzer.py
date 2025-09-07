@@ -5,7 +5,7 @@ import vertexai
 from vertexai.generative_models import GenerativeModel
 from dotenv import load_dotenv
 
-# Load .env variables and initialize Vertex AI
+#initialize Vertex AI
 dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
 load_dotenv(dotenv_path=dotenv_path)
 
@@ -24,7 +24,7 @@ def analyze_text_with_llm(text: str):
     """
     if not GCP_PROJECT_ID: return {"sentiment": "Error", "topics": [], "summary": "Vertex AI not initialized."}
     
-    # Use the fast and cost-effective Flash model for this high-volume task
+  
     model = GenerativeModel("gemini-1.5-flash-001")
 
     prompt = f"""
@@ -64,7 +64,7 @@ def query_llm_for_product_info(product_name: str, question: str):
     if not GCP_PROJECT_ID: return "Vertex AI not initialized. Cannot query for product info."
     
     print(f"Querying LLM for: '{question}'...")
-    # Use the powerful Pro model for general knowledge questions
+    
     model = GenerativeModel("gemini-1.5-pro-001")
 
     prompt = f"""
@@ -83,16 +83,16 @@ def query_llm_for_product_info(product_name: str, question: str):
         return "Sorry, I was unable to answer that question."
 
 
-# --- Example Usage ---
+
 if __name__ == "__main__":
-    # Test Function 1: Analyzing a scraped review
+    
     sample_review = "I find Nandini milk to be really good value for the price, and the taste is consistent. However, I've noticed the packaging for the toned milk can sometimes leak."
     print("--- Testing Text Analysis ---")
     analysis_result = analyze_text_with_llm(sample_review)
     print(json.dumps(analysis_result, indent=2))
     print("-" * 20)
 
-    # Test Function 2: Asking a general knowledge question
+    
     product = "Nandini Milk"
     question = "What are the common opinions about Nandini Milk's quality and price in Karnataka?"
     print("\n--- Testing General Knowledge Query ---")

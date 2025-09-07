@@ -21,7 +21,7 @@ class VectorStore:
         else:
             print("Creating a new, empty vector store.")
             self.index = faiss.IndexFlatL2(dimension)
-            self.doc_map = {} # Maps index position to document ID from SQL
+            self.doc_map = {} 
             self.next_idx = 0
 
     def add_documents(self, doc_ids: list, vectors: list):
@@ -37,7 +37,7 @@ class VectorStore:
 
     def search(self, query_vector: list, k=5):
         """Searches for k-nearest neighbors to a query vector."""
-        # --- THIS IS THE FIX ---
+        
         # Check if the index has any vectors before searching.
         if self.index.ntotal == 0:
             print("Vector store is empty. Returning no results.")

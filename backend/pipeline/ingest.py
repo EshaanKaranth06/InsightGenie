@@ -14,12 +14,9 @@ from backend.pipeline.vector_store import VectorStore
 from backend.db.models import Feedback, init_db
 from backend.config import SCRAPER_CONFIG
 
-# Load .env
 dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
 load_dotenv(dotenv_path=dotenv_path)
 
-# Ensure Feedback model has unique constraint:
-# source_id = Column(String, unique=True, index=True)
 
 def process_and_store(items: list, session: Session, vector_store: VectorStore):
     """Cleans, embeds, and stores feedback in SQL and a vector DB."""
@@ -31,7 +28,7 @@ def process_and_store(items: list, session: Session, vector_store: VectorStore):
     for item in tqdm(items, desc="Processing Items"):
         try:
             # Use stable source_id from scraper
-            source_id = item.get("source_id")  # Must be YouTube video ID or Reddit post ID
+            source_id = item.get("source_id")  
             if not source_id:
                 continue  # Skip if no stable ID
 
@@ -70,7 +67,7 @@ def process_and_store(items: list, session: Session, vector_store: VectorStore):
             traceback.print_exc()
             session.rollback()
 
-    # Add vectors in one batch
+    
     if new_vectors:
         vector_store.add_documents(new_doc_ids, new_vectors)
         print(f"Added {len(new_vectors)} new vectors to the vector store.")

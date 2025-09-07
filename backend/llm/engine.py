@@ -9,11 +9,10 @@ from backend.pipeline.embeddings import get_embedding
 from backend.db.models import Feedback
 from sqlalchemy.orm import Session
 
-# Load .env variables
+
 dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
 load_dotenv(dotenv_path=dotenv_path)
 
-# --- Initialize the Hugging Face Inference Client for Fireworks AI ---
 HF_TOKEN = os.getenv("HF_TOKEN")
 
 class InsightEngine:
@@ -26,7 +25,7 @@ class InsightEngine:
                 provider="fireworks-ai",
                 api_key=HF_TOKEN
             )
-            # Use the specified DeepSeek model
+            
             self.model = "deepseek-ai/DeepSeek-V3.1"
         else:
             self.client = None
@@ -73,7 +72,7 @@ class InsightEngine:
             
             print(f"Generating detailed analysis with {self.model} via Fireworks AI...")
             
-            # Use the OpenAI-compatible chat.completions.create method
+            
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -82,7 +81,7 @@ class InsightEngine:
                 ],
                 max_tokens=1024,
                 temperature=0.7,
-                stream=False # Set to False to get the full response at once
+                stream=False 
             )
             
             return response.choices[0].message.content.strip()

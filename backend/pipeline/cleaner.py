@@ -14,5 +14,5 @@ def clean_text(text: str) -> str:
     t = MENTION_RE.sub("", t)
     t = t.replace("\n", " ").strip()
     t = MULTIWS_RE.sub(" ", t)
-    # optionally remove emojis: keep them or strip depending on needs
+    
     return t

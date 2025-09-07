@@ -3,13 +3,11 @@ from fastapi import FastAPI, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 
-# --- Local Module Imports ---
 from backend.db.models import init_db
 from backend.llm.engine import InsightEngine
 from backend.pipeline.vector_store import VectorStore
 from backend.pipeline.ingest import run_full_ingest
 
-# Load .env file from the project root
 load_dotenv()
 
 app = FastAPI(title="InsightGenie API")

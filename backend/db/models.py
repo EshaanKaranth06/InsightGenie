@@ -13,9 +13,9 @@ class Feedback(Base):
     source = Column(String(50), nullable=False)
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-    feedback_metadata = Column(JSON) # Renamed to avoid conflict
+    feedback_metadata = Column(JSON) 
 
-# You can keep your init_db function here or in a separate file
+
 def init_db(db_url: str):
     engine = create_engine(db_url)
     Base.metadata.create_all(engine)
