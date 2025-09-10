@@ -1,8 +1,0 @@
-You are a product analyst AI. Based on the following user feedback, identify the top 3 positive themes and the top 3 negative themes. For each theme, provide a brief summary and one representative quote from the feedback provided.
-
-Format your response as a JSON object with two keys: "positive_themes" and "negative_themes".
-
-User Feedback Context:
----
-{context}
----
