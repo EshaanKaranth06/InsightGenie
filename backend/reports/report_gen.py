@@ -1,9 +1,9 @@
-# In your report_gen.py file...
+
 from db.store import Session, Feedback, init_db
 import pandas as pd
 from datetime import datetime
 import os
-from backend.reports.email_sender import send_email # <-- IMPORT THE FUNCTION
+from backend.reports.email_sender import send_email 
 
 DB_URL = "sqlite:///insightgenie.db"
 
@@ -11,10 +11,10 @@ def generate_and_email_report(limit=100):
     """
     Fetches feedback, saves it as a CSV, and emails the report.
     """
-    # ... (your existing code to fetch data and create the DataFrame)
+
     
-    data = [] # Your data fetching logic
-    # ...
+    data = [] 
+    
     
     df = pd.DataFrame(data)
 
@@ -30,9 +30,6 @@ def generate_and_email_report(limit=100):
     recipients = [os.getenv("EMAIL_RECIPIENT")]
     
     send_email(subject, body, recipients, csv_file)
-    
-    # Optional: Clean up the local file after sending
-    # os.remove(csv_file)
     
     return df
 

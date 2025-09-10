@@ -1,4 +1,4 @@
-# backend/pipeline/vector_store.py
+
 import faiss
 import numpy as np
 import pickle

@@ -33,7 +33,7 @@ SCRAPER_CONFIG = {
         ],
         "max_posts": 50
     },
-    # You can enable other scrapers like Google Reviews here if needed
+    
     "google_reviews": {
         "enabled": False 
     }
