@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; }
+        h1, h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        h1 { font-size: 28px; }
+        h2 { font-size: 22px; margin-top: 30px; }
+        .report-header { text-align: center; margin-bottom: 40px; }
+        .report-header p { font-size: 14px; color: #7f8c8d; }
+        .content { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="report-header">
+        <h1>InsightGenie Summary Report</h1>
+        <h2>{{ product_name }}</h2>
+        <p>Generated on: {{ generation_date }}</p>
+    </div>
+
+    <div class="content">
+        <h2>Overall Summary</h2>
+        {{ overall_summary | safe }}
+
+        <h2>Positive Themes (Pros)</h2>
+        {{ pros_summary | safe }}
+
+        <h2>Negative Themes (Cons & Criticisms)</h2>
+        {{ cons_summary | safe }}
+        
+        <h2>Feature Requests & Suggestions</h2>
+        {{ requests_summary | safe }}
+    </div>
+</body>
+</html>

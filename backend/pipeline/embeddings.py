@@ -1,17 +1,20 @@
-
 import os
-from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
 
-dotenv_path = os.path.join(os.path.dirname(__file__), '..', '..', '.env')
-load_dotenv(dotenv_path=dotenv_path)
+hf_token = os.getenv("HF_API_KEY") or os.getenv("HF_TOKEN")
 
-hf_token = os.getenv("HF_API_KEY")
-
-model = SentenceTransformer('all-MiniLM-L6-v2', token=hf_token)
+try:
+    model = SentenceTransformer('all-MiniLM-L6-v2', use_auth_token=hf_token)
+except Exception as e:
+    raise RuntimeError(f"Failed to load embedding model: {e}")
 
 def get_embedding(text: str):
-    """Generates a vector embedding for a given text."""
-    if not text or not isinstance(text, str):
+    """Generate a vector embedding for the given text."""
+    if not text or not isinstance(text, str) or not text.strip():
         return None
-    return model.encode(text).tolist()
+
+    try:
+        return model.encode(text, normalize_embeddings=True).tolist()
+    except Exception as e:
+        print(f"Embedding generation failed: {e}")
+        return None

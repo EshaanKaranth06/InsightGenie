@@ -1,85 +1,87 @@
 import os
-from fastapi import FastAPI, Depends, BackgroundTasks
-from fastapi.responses import HTMLResponse
-import markdown2
-from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 
-# --- Local Module Imports ---
-from backend.db.models import init_db
+# --- ADD THIS BLOCK AT THE TOP ---
+# This finds the .env file in the 'backend' folder, one level up from this 'api' folder
+dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+load_dotenv(dotenv_path=dotenv_path)
+
+
+from fastapi import FastAPI, BackgroundTasks, Depends
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from backend.db import models
+from backend.db.database import SessionLocal, engine
 from backend.llm.engine import InsightEngine
-from backend.pipeline.vector_store import VectorStore
-from backend.pipeline.ingest import run_full_ingest
+from backend.pipeline.tasks import run_full_ingest_task
+from backend.reports.report_gen import generate_and_email_report_task
 
-# Load .env file from the project root
-load_dotenv()
+models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="InsightGenie API")
+insight_engine = InsightEngine()
 
-# --- Initialize DB and Vector Store on Startup ---
-DB_URL = os.getenv("DATABASE_URL", "sqlite:///./backend/feedback.db")
-SessionLocal = init_db(DB_URL)
-vector_store = VectorStore(
-    index_path="backend/faiss_index.bin",
-    map_path="backend/doc_map.pkl"
+app = FastAPI(
+    title="InsightGenie API",
+    description="API for scraping, analyzing, and reporting on customer feedback.",
+    version="1.0.0"
 )
 
-# --- THIS IS THE MISSING SECTION ---
-# --- Dependencies ---
+class QuestionRequest(BaseModel):
+    question: str
+
 def get_db():
-    """Dependency to get a DB session for a single request."""
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
 
-def get_engine(db: Session = Depends(get_db)):
-    """Dependency to get an instance of the InsightEngine."""
-    return InsightEngine(db_session=db, vector_store=vector_store)
-# --- END OF MISSING SECTION ---
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to InsightGenie API"}
 
-
-# --- API Endpoints ---
-@app.post("/ingest")
-async def trigger_ingestion(background_tasks: BackgroundTasks):
-    """Triggers the scraping and processing pipeline as a background job."""
-    print("API: Received request to start ingestion.")
-    background_tasks.add_task(run_full_ingest, vector_store)
+@app.post("/products/{product_id}/ingest")
+def trigger_ingestion(product_id: int, background_tasks: BackgroundTasks):
+    background_tasks.add_task(run_full_ingest_task, product_id)
     return {
         "status": "success",
-        "message": "Ingestion process started in the background. Check server logs for progress."
+        "message": f"Ingestion process for product {product_id} started in the background."
     }
 
-@app.get("/query")
-async def query_insights_json(question: str, engine: InsightEngine = Depends(get_engine)):
-    """Asks a question and returns the raw analysis in JSON format."""
-    answer = engine.answer_question(question)
-    return {"answer": answer}
+@app.post("/products/{product_id}/ask")
+def ask_question(product_id: int, request: QuestionRequest):
+    try:
+        generator = insight_engine.answer_question(
+            question=request.question,
+            product_id=product_id   # type: ignore
+        )
+        return StreamingResponse(generator, media_type="text/event-stream")
+    except Exception as e:
+        return StreamingResponse(
+            iter([f"An unexpected error occurred: {e}"]),
+            media_type="text/event-stream"
+        )
 
-@app.get("/query/html", response_class=HTMLResponse)
-async def query_insights_html(question: str, engine: InsightEngine = Depends(get_engine)):
-    """Asks a question and returns the analysis as a polished HTML page."""
-    markdown_answer = engine.answer_question(question)
-    html_content = markdown2.markdown(
-        markdown_answer, 
-        extras=["fenced-code-blocks", "tables", "cuddled-lists"]
+@app.post("/products/{product_id}/email-report")
+def email_product_report(product_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    product = db.query(models.Product).filter(models.Product.id == product_id).first()
+    if not product:
+        return {"error": "Product not found"}
+
+    recipient = os.getenv("EMAIL_RECIPIENT")
+    if not recipient:
+        return {
+            "status": "error",
+            "message": "Server is not configured with a recipient email. Please set EMAIL_RECIPIENT in the .env file."
+        }
+    
+    background_tasks.add_task(
+        generate_and_email_report_task,
+        product_id=product_id,
+        recipient_email=recipient,
+        product_name=str(product.name)
     )
-    html_with_style = f"""
-    <html>
-        <head>
-            <style>
-                body {{ font-family: sans-serif; line-height: 1.6; padding: 2em; max-width: 800px; margin: auto; }}
-                h2 {{ border-bottom: 1px solid #ccc; padding-bottom: 5px; }}
-                blockquote {{ border-left: 3px solid #eee; padding-left: 1em; margin-left: 0; color: #555; }}
-            </style>
-        </head>
-        <body>
-            <h1>InsightGenie Analysis</h1>
-            <h3>Query: "{question}"</h3>
-            <hr>
-            {html_content}
-        </body>
-    </html>
-    """
-    return HTMLResponse(content=html_with_style)
+    
+    return {"message": "Report generation has started. It will be sent to your email shortly."}

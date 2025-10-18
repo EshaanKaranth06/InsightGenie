@@ -1,23 +1,27 @@
+from sqlalchemy import Column, Integer, String, ForeignKey, JSON
+from sqlalchemy.orm import relationship
+from .database import Base
 
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, JSON
-from sqlalchemy.orm import sessionmaker, declarative_base
-from datetime import datetime
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    products = relationship("Product", back_populates="owner", cascade="all, delete-orphan")
 
-Base = declarative_base()
+class Product(Base):
+    __tablename__ = 'products'
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), index=True, nullable=False)
+    owner_id = Column(Integer, ForeignKey('users.id'))
+    owner = relationship("User", back_populates="products")
+    config = relationship("ScraperConfig", uselist=False, back_populates="product", cascade="all, delete-orphan")
 
-class Feedback(Base):
-    __tablename__ = 'feedback'
-    
-    id = Column(Integer, primary_key=True)
-    source_id = Column(String, unique=True, nullable=False)
-    source = Column(String(50), nullable=False)
-    content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    feedback_metadata = Column(JSON) 
-
-
-def init_db(db_url: str):
-    engine = create_engine(db_url)
-    Base.metadata.create_all(engine)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    return SessionLocal
+class ScraperConfig(Base):
+    __tablename__ = 'scraper_configs'
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey('products.id'))
+    search_query = Column(String(512))
+    youtube_keywords = Column(JSON)
+    reddit_subreddits = Column(JSON)
+    product = relationship("Product", back_populates="config")
