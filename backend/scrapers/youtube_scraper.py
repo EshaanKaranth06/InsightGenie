@@ -62,7 +62,7 @@ def scrape_youtube(query: str, keywords: list, max_videos: int = 10):
         "youtube", "v3", developerKey=YOUTUBE_API_KEY
     )
     
-    print(f"🔍 Finding top {max_videos} YouTube videos for query: '{query}'...")
+    print(f" Finding top {max_videos} YouTube videos for query: '{query}'...")
     video_ids = _get_video_ids(youtube, query, max_videos)
     print(f"Found {len(video_ids)} videos. Now fetching comments...")
     
