@@ -23,7 +23,7 @@ class QdrantDB:
         if not qdrant_url or not qdrant_api_key:
             raise ValueError("Qdrant environment variables are not set!")
 
-        self.client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key)
+        self.client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key, timeout=60)
         self._initialize_collection()
 
     def _initialize_collection(self):
@@ -73,20 +73,33 @@ class QdrantDB:
 
     def upsert_many_feedbacks(self, items: List[Dict]):
         points_to_upsert = []
+        
+        # 1. Separate content from payloads
+        contents_to_embed = []
+        valid_items = []
         for item in items:
             content = item.get("content")
-            if not content:
-                print(f"Skipping feedback due to invalid content: ID {item.get('external_id')}")
-                continue
-
-            vector = get_embedding(content)
-            if vector:
-                point_id = create_deterministic_id(item["source"], item["external_id"])
-                point = models.PointStruct(id=point_id, vector=vector, payload=item)
-                points_to_upsert.append(point)
+            # Check for valid, non-empty content
+            if content and content.strip():
+                contents_to_embed.append(content)
+                valid_items.append(item)
             else:
-                 print(f"Skipping feedback due to embedding failure: ID {item.get('external_id')}")
+                 print(f"Skipping feedback due to invalid content: ID {item.get('external_id')}")
 
+        if not valid_items:
+            return # No valid items to process
+            
+        # 2. Embed all contents in a single, fast batch
+        print(f"Generating {len(contents_to_embed)} embeddings...")
+        vectors = embedding_model.encode(contents_to_embed).tolist()
+        
+        # 3. Create PointStructs
+        for item, vector in zip(valid_items, vectors):
+            point_id = create_deterministic_id(item["source"], item["external_id"])
+            point = models.PointStruct(id=point_id, vector=vector, payload=item)
+            points_to_upsert.append(point)
+            
+        # 4. Upsert the batch to Qdrant
         if points_to_upsert:
             self.client.upsert(
                 collection_name=self.collection_name,

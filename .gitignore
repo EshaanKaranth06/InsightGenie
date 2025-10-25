@@ -39,3 +39,5 @@ dist/
 build/
 
 backend/igenv/
+
+feedback.db

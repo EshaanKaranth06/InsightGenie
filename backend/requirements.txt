@@ -1,39 +1,37 @@
 # --- Core Data & ML ---
 numpy
 pandas
-nltk
 sentence-transformers
-huggingface-hub
-openai
-vaderSentiment==3.3.2
+huggingface-hub[inference]
+vaderSentiment==3.3.2 # Keeping pinned version
 
-# --- Web Scraping & APIs ---
-snscrape==0.7.0.20230622
-praw==7.8.1
-requests
-beautifulsoup4
-google-api-python-client
-youtube-transcript-api
-google-search-results
-selenium
-webdriver-manager
-ntscraper
-
-# --- Database ---
-sqlalchemy
-mysql-connector-python
-psycopg2-binary
-
-# --- Web Framework ---
+# --- Web Framework & Server ---
 fastapi
 uvicorn[standard]
+
+# --- Database & Vector DB ---
+sqlalchemy
+pymysql
+qdrant-client
+
+# --- Background Tasks ---
+celery[redis]
+gevent # For Windows worker pool
+
+# --- Web Scraping & APIs ---
+praw==7.8.1 # Keeping pinned version
+google-api-python-client
+serpapi-python
+requests
+httpx # Dependency for API clients
+
+# --- Authentication ---
+clerk-sdk-python
+
+# --- Reporting ---
+fpdf2
+Jinja2 # Often needed by PDF/templating libs
 
 # --- Utilities ---
 python-dotenv
 tqdm
-markdown2
-
-# --- Plotting ---
-matplotlib
-seaborn
-google-auth

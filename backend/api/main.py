@@ -1,87 +1,285 @@
 import os
 from dotenv import load_dotenv
 
-# --- ADD THIS BLOCK AT THE TOP ---
-# This finds the .env file in the 'backend' folder, one level up from this 'api' folder
+# --- Load .env at the very top ---
 dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
 load_dotenv(dotenv_path=dotenv_path)
-
-
-from fastapi import FastAPI, BackgroundTasks, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from typing import List, Optional
 
+from backend.db.models import Product as DBProduct
+from backend.db.models import ScraperConfig as DBScraperConfig
 from backend.db import models
 from backend.db.database import SessionLocal, engine
 from backend.llm.engine import InsightEngine
 from backend.pipeline.tasks import run_full_ingest_task
 from backend.reports.report_gen import generate_and_email_report_task
+from backend.api import schemas
+from backend.api.auth import get_current_user_id
 
+# Create database tables if they don't exist
 models.Base.metadata.create_all(bind=engine)
 
+# Create a single instance of the InsightEngine
 insight_engine = InsightEngine()
 
+origins = [
+    "http://localhost:3000", # Default Next.js port
+    "http://localhost:3001", # Port currently in use
+    # Add frontend deployment URL later
+]
+
+# Initialize FastAPI app
 app = FastAPI(
     title="InsightGenie API",
     description="API for scraping, analyzing, and reporting on customer feedback.",
     version="1.0.0"
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins, # Allows requests from these frontend origins
+    allow_credentials=True, # Allows cookies/auth headers
+    allow_methods=["*"],    # Allows all methods (GET, POST, OPTIONS, etc.)
+    allow_headers=["*"],    # Allows all headers (like Authorization)
+)
+# --- Pydantic Models ---
 class QuestionRequest(BaseModel):
     question: str
 
+# --- FastAPI Dependencies ---
 def get_db():
+    """Dependency to get a DB session for a single request."""
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
 
+
+# --- API Endpoints ---
 @app.get("/")
 def read_root():
+    """Root endpoint for basic API check."""
     return {"message": "Welcome to InsightGenie API"}
 
-@app.post("/products/{product_id}/ingest")
-def trigger_ingestion(product_id: int, background_tasks: BackgroundTasks):
-    background_tasks.add_task(run_full_ingest_task, product_id)
+# --- Product CRUD Endpoints ---
+
+@app.post("/products", response_model=schemas.Product, status_code=status.HTTP_201_CREATED)
+def create_product(
+    product_data: schemas.ProductCreate,
+    db: Session = Depends(get_db),
+    owner_id: int = Depends(get_current_user_id)
+):
+    
+    # --- START: Check if user exists, create if not ---
+    db_user = db.query(models.User).filter(models.User.id == owner_id).first()
+    if not db_user:
+        print(f"User {owner_id} not found in DB, creating...")
+        # In a real app, you'd fetch email from Clerk using the owner_id
+        # For now, use a placeholder email or derive from user_id
+        placeholder_email = f"{owner_id}@example.com"
+        # Use a placeholder password hash (not used for Clerk OAuth anyway)
+        placeholder_hash = "placeholder_password_hash"
+        
+        new_db_user = models.User(
+            id=owner_id,
+            email=placeholder_email,
+            hashed_password=placeholder_hash
+        )
+        db.add(new_db_user)
+        # No commit/flush here yet, let the product creation handle it
+    # --- END: User check/create ---
+    """Creates a new product and its associated scraper configuration."""
+    new_product = models.Product(
+        name=product_data.name,
+        owner_id=owner_id
+    )
+    db.add(new_product)
+    db.flush()
+
+    new_config = models.ScraperConfig(
+        product_id=new_product.id,
+        search_query=product_data.config.search_query,
+        youtube_keywords=product_data.config.youtube_keywords,
+        reddit_subreddits=product_data.config.reddit_subreddits
+    )
+    db.add(new_config)
+    db.commit()
+    db.refresh(new_product)
+    return new_product
+
+@app.get("/products", response_model=List[schemas.Product])
+def read_products(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    owner_id: int = Depends(get_current_user_id)
+):
+    """Retrieves a list of products owned by the user."""
+    products = db.query(models.Product).filter(
+        models.Product.owner_id == owner_id
+    ).offset(skip).limit(limit).all()
+    return products
+
+@app.get("/products/{product_id}", response_model=schemas.Product)
+def read_product(
+    product_id: int,
+    db: Session = Depends(get_db),
+    owner_id: int = Depends(get_current_user_id)
+):
+    """Retrieves a specific product by ID."""
+    product = db.query(models.Product).filter(
+        models.Product.id == product_id,
+        models.Product.owner_id == owner_id
+    ).first()
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found or access denied")
+    return product
+
+@app.put("/products/{product_id}", response_model=schemas.Product)
+def update_product(
+    product_id: int,
+    product_update: schemas.ProductUpdate,
+    db: Session = Depends(get_db),
+    owner_id: int = Depends(get_current_user_id)
+):
+    """Updates a specific product's details and/or configuration."""
+    db_product: Optional[DBProduct] = db.query(DBProduct).filter(
+        DBProduct.id == product_id,
+        DBProduct.owner_id == owner_id
+    ).first()
+
+    if db_product is None:
+        raise HTTPException(status_code=404, detail="Product not found or access denied")
+
+    # Update product name if provided
+    if product_update.name is not None:
+        setattr(db_product, 'name', product_update.name)
+
+    # Update config if provided
+    if product_update.config is not None:
+        db_config: Optional[DBScraperConfig] = db_product.config
+
+        if db_config:
+            # Use dict() for Pydantic v1
+            update_data = product_update.config.dict(exclude_unset=True)
+            
+            for key, value in update_data.items():
+                if hasattr(db_config, key):
+                    setattr(db_config, key, value)
+        else:
+            # Create new config if it doesn't exist
+            print(f"Warning: Config not found for product {product_id}, creating new one.")
+            new_config_data = product_update.config.dict()
+            
+            new_config = DBScraperConfig(product_id=db_product.id, **new_config_data)
+            db.add(new_config)
+            db_product.config = new_config
+
+    db.commit()
+    db.refresh(db_product)
+    return db_product
+
+@app.delete("/products/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_product(
+    product_id: int,
+    db: Session = Depends(get_db),
+    owner_id: int = Depends(get_current_user_id)
+):
+    """Deletes a specific product and its config."""
+    db_product = db.query(models.Product).filter(
+        models.Product.id == product_id,
+        models.Product.owner_id == owner_id
+    ).first()
+
+    if db_product is None:
+        raise HTTPException(status_code=404, detail="Product not found or access denied")
+
+    db.delete(db_product)
+    db.commit()
+    return None
+
+# --- Task Trigger Endpoints ---
+
+@app.post("/products/{product_id}/ingest", status_code=status.HTTP_202_ACCEPTED)
+def trigger_ingestion(
+    product_id: int,
+    db: Session = Depends(get_db),
+    owner_id: int = Depends(get_current_user_id)
+):
+    """Queues the data ingestion task for a specific product."""
+    product = db.query(models.Product).filter(
+        models.Product.id == product_id,
+        models.Product.owner_id == owner_id
+    ).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found or access denied")
+
+    run_full_ingest_task.delay(product_id)
     return {
-        "status": "success",
-        "message": f"Ingestion process for product {product_id} started in the background."
+        "status": "queued",
+        "message": f"Ingestion task for product {product_id} has been queued."
     }
 
 @app.post("/products/{product_id}/ask")
-def ask_question(product_id: int, request: QuestionRequest):
+def ask_question(
+    product_id: int,
+    request: QuestionRequest,
+    db: Session = Depends(get_db),
+    owner_id: int = Depends(get_current_user_id)
+):
+    """Streams an AI-generated answer based on feedback for a specific product."""
+    product = db.query(models.Product).filter(
+        models.Product.id == product_id,
+        models.Product.owner_id == owner_id
+    ).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found or access denied")
+
+    product_name = str(product.name)
+
     try:
         generator = insight_engine.answer_question(
             question=request.question,
-            product_id=product_id   # type: ignore
+            product_id=product_id,
+            product_name=product_name
         )
         return StreamingResponse(generator, media_type="text/event-stream")
     except Exception as e:
+        print(f"Error during /ask endpoint: {e}")
         return StreamingResponse(
-            iter([f"An unexpected error occurred: {e}"]),
-            media_type="text/event-stream"
+            iter(["An unexpected error occurred while generating the answer."]),
+            media_type="text/event-stream",
+            status_code=500
         )
 
-@app.post("/products/{product_id}/email-report")
-def email_product_report(product_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    product = db.query(models.Product).filter(models.Product.id == product_id).first()
+@app.post("/products/{product_id}/email-report", status_code=status.HTTP_202_ACCEPTED)
+def email_product_report(
+    product_id: int,
+    db: Session = Depends(get_db),
+    owner_id: int = Depends(get_current_user_id)
+):
+    """Queues the PDF report generation and emailing task."""
+    product = db.query(models.Product).filter(
+        models.Product.id == product_id,
+        models.Product.owner_id == owner_id
+    ).first()
     if not product:
-        return {"error": "Product not found"}
+        raise HTTPException(status_code=404, detail="Product not found or access denied")
 
     recipient = os.getenv("EMAIL_RECIPIENT")
     if not recipient:
-        return {
-            "status": "error",
-            "message": "Server is not configured with a recipient email. Please set EMAIL_RECIPIENT in the .env file."
-        }
-    
-    background_tasks.add_task(
-        generate_and_email_report_task,
+        raise HTTPException(status_code=500, detail="Server recipient email not configured.")
+
+    generate_and_email_report_task.delay(
         product_id=product_id,
         recipient_email=recipient,
         product_name=str(product.name)
     )
-    
-    return {"message": "Report generation has started. It will be sent to your email shortly."}
+
+    return {"message": "Report generation task queued. It will be sent to the configured email shortly."}

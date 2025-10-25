@@ -4,7 +4,7 @@ from .database import Base
 
 class User(Base):
     __tablename__ = 'users'
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String(255), primary_key=True, index=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     products = relationship("Product", back_populates="owner", cascade="all, delete-orphan")
@@ -13,7 +13,7 @@ class Product(Base):
     __tablename__ = 'products'
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), index=True, nullable=False)
-    owner_id = Column(Integer, ForeignKey('users.id'))
+    owner_id = Column(String(255), ForeignKey('users.id'), nullable=False, index=True)
     owner = relationship("User", back_populates="products")
     config = relationship("ScraperConfig", uselist=False, back_populates="product", cascade="all, delete-orphan")
 
