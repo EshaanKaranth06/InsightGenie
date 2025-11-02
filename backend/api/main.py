@@ -19,7 +19,7 @@ from backend.llm.engine import InsightEngine
 from backend.pipeline.tasks import run_full_ingest_task
 from backend.reports.report_gen import generate_and_email_report_task
 from backend.api import schemas
-from backend.api.auth import get_current_user_id
+from backend.api.auth import get_current_user_id, get_user_email
 
 # Create database tables if they don't exist
 models.Base.metadata.create_all(bind=engine)
@@ -272,7 +272,7 @@ def email_product_report(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found or access denied")
 
-    recipient = os.getenv("EMAIL_RECIPIENT")
+    recipient =  get_user_email(str(owner_id))     #os.getenv("EMAIL_RECIPIENT")
     if not recipient:
         raise HTTPException(status_code=500, detail="Server recipient email not configured.")
 

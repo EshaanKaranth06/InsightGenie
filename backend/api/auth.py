@@ -91,3 +91,57 @@ async def get_current_user_id(
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+def get_user_email(user_id: str) -> str:
+    
+    try:
+        # Get user details from Clerk
+        user = clerk_client.users.get(user_id=user_id)
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found in Clerk."
+            )
+
+        # Extract primary email address with proper null checks
+        primary_email_id = getattr(user, 'primary_email_address_id', None)
+        email_addresses = getattr(user, 'email_addresses', None)
+        
+        user_email = None
+        
+        if primary_email_id and email_addresses:
+            for email in email_addresses:
+                if hasattr(email, 'id') and hasattr(email, 'email_address'):
+                    if email.id == primary_email_id:
+                        user_email = email.email_address
+                        break
+
+        if not user_email:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User's primary email not found in Clerk."
+            )
+            
+        return user_email
+
+    except HTTPException:
+        raise
+    except httpx.HTTPStatusError as e:
+        print(f"Clerk API returned HTTP {e.response.status_code}: {e.response.text}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Clerk API error during user fetch."
+        )
+    except httpx.RequestError as e:
+        print(f"Network error communicating with Clerk: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Network issue contacting Clerk."
+        )
+    except Exception as e:
+        print(f"Unexpected error retrieving user email: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error."
+        )

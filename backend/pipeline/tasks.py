@@ -100,19 +100,17 @@ def run_full_ingest_task(product_id: int):
                 limit=10 # Get top 10 results
             )
         )
-        # --- END OF GOOGLE SEARCH SCRAPING ---
-
         print(f"\n--- Data Collection Complete: Found {len(all_feedback)} total items from all sources ---")
         if all_feedback:
             process_and_store(all_feedback, product_id, qdrant_client)
         else:
-            print("⚠️ No feedback items collected from any source.")
+            print("No feedback items collected from any source.")
 
-        print(f"\n✅ Ingestion task for product {product_id} finished successfully.")
+        print(f"\n Ingestion task for product {product_id} finished successfully.")
 
     except Exception as e:
         # Add broader error catching for the whole task
-        print(f"❌ CRITICAL ERROR during ingestion task for product {product_id}: {e}")
+        print(f" CRITICAL ERROR during ingestion task for product {product_id}: {e}")
         import traceback
         traceback.print_exc()
     finally:

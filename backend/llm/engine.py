@@ -25,7 +25,7 @@ class InsightEngine:
         hf_token = os.getenv("HF_TOKEN")
         if hf_token:
             self.llm_client = InferenceClient(provider="fireworks-ai", api_key=hf_token)
-            self.model = "openai/gpt-oss-120b"
+            self.model = "openai/gpt-oss-120b" #deepseek-ai/DeepSeek-R1-0528
             print(f"Using LLM model via Fireworks AI: {self.model}")
         else:
             raise ValueError("HF_TOKEN environment variable is not set!")
@@ -82,9 +82,9 @@ class InsightEngine:
             if not query_vector:
                 yield "Error: Could not process the query into an embedding."
                 return
-            print("✅ STEP 1: Query processed successfully.")
+            print("STEP 1: Query processed successfully.")
 
-            print(f"🚦 STEP 2: Searching Qdrant for product_id {product_id}...")
+            print(f"STEP 2: Searching Qdrant for product_id {product_id}...")
             search_results = self.qdrant_client.search(
                 collection_name=self.collection_name,
                 query_vector=query_vector,
@@ -99,10 +99,10 @@ class InsightEngine:
                 limit=100, 
                 with_payload=True
             )
-            print("✅ STEP 2: Qdrant search complete.")
+            print("STEP 2: Qdrant search complete.")
 
             if not search_results:
-                yield "## Analysis Result\n\n❌ No relevant user feedback was found for this product in the database.\n\nPlease ensure reviews have been scraped and indexed for this product."
+                yield "## Analysis Result\n\n No relevant user feedback was found for this product in the database.\n\nPlease ensure reviews have been scraped and indexed for this product."
                 return
 
             print(f"Found {len(search_results)} relevant comments.")
@@ -162,7 +162,7 @@ Your Answer:"""
             print(f"\n--- CONTEXT FOR '{question}' ---")
             print(context_text)
             print("--- END CONTEXT ---\n")
-            print(f"🚦 STEP 3: Generating analysis with {self.model} via Fireworks AI...")
+            print(f"STEP 3: Generating analysis with {self.model} via Fireworks AI...")
             stream = self.llm_client.chat.completions.create(
                 model=self.model, 
                 messages=[
@@ -173,7 +173,7 @@ Your Answer:"""
                 temperature=0.3, # Lower temp for more factual answers
                 stream=True
             )
-            print("✅ STEP 3: Stream from LLM received. Yielding content...")
+            print("STEP 3: Stream from LLM received. Yielding content...")
 
             for chunk in stream:
                 content = chunk.choices[0].delta.content
@@ -185,17 +185,10 @@ Your Answer:"""
         except Exception as e:
             print(f"An error occurred while generating the analysis: {e}")
             traceback.print_exc()
-            yield f"\n\n**⚠️ An error occurred:** {e}\n\nPlease check your configuration and try again."
+            yield f"\n\n** An error occurred:** {e}\n\nPlease check your configuration and try again."
 
     def generate_report(self, product_id: int, product_name: str, time_period: str = "weekly"):
-        """
-        Generate a comprehensive product insight report
-        
-        Args:
-            product_id: ID of the product
-            product_name: Name of the product
-            time_period: Report period (daily/weekly/monthly)
-        """
+       
         question = f"Provide a comprehensive analysis of all customer feedback for {product_name}, focusing exclusively on the product itself - its features, performance, quality, and user experience. Ignore all comments about videos or reviews."
         
         yield f"# InsightGenie Summary Report\n"
