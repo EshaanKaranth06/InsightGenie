@@ -3,6 +3,8 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+export PYTHONPATH=/opt/render/project/src
+
 echo "Starting Celery Worker..."
 # Start the Celery worker in the background
 # Use -P solo for the free tier to save resources
