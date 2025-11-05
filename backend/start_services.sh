@@ -1,13 +1,10 @@
 #!/bin/bash
 set -e
 
-# Add the current directory (which is now /backend) to the python path
-export PYTHONPATH=. 
-
 echo "Starting Celery Worker..."
-# Tell celery to find the app at 'celery_app'
+# Call the app directly, as 'backend' is the root
 celery -A celery_app worker --loglevel=INFO -P gevent -c 10 &
 
 echo "Starting FastAPI API Server..."
-# Tell uvicorn to find the app at 'api.main:app'
+# Call the app directly
 uvicorn api.main:app --host 0.0.0.0 --port $PORT
