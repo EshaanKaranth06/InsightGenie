@@ -21,7 +21,7 @@ gevent # For Windows worker pool
 # --- Web Scraping & APIs ---
 praw==7.8.1 # Keeping pinned version
 google-api-python-client
-serpapi-python
+serpapi
 requests
 httpx # Dependency for API clients
 
