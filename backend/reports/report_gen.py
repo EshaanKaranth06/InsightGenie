@@ -11,7 +11,7 @@ from backend.celery_app import celery
 class PDF(FPDF):
     def header(self):
         self.set_font('Arial', 'B', 12)
-        self.cell(0, 10, 'InsightGenie Summary Report', 0, 1, 'C')
+        self.cell(0, 10, 'SPARKS.ai Summary Report', 0, 1, 'C')
         self.ln(10)
         
 @celery.task
@@ -69,12 +69,12 @@ def generate_and_email_report_task(product_id: int, recipient_email: str, produc
             pdf.ln(5)
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        pdf_file = f"InsightGenie_Report_{product_id}_{timestamp}.pdf"
+        pdf_file = f"SPARKS.ai_Report_{product_id}_{timestamp}.pdf"
         pdf.output(pdf_file)
         print(f"PDF report generated: {pdf_file}")
 
         # --- Emailing ---
-        subject = f"InsightGenie Summary Report for {product_name}"
+        subject = f"SPARKS.ai Summary Report for {product_name}"
         body = f"<html><body><h2>Your Summary Report is Ready</h2><p>Attached is the AI-generated summary report for <b>{product_name}</b>.</p></body></html>"
         send_email(subject, body, recipient_email, pdf_file)
 

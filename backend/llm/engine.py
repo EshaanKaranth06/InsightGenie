@@ -25,7 +25,7 @@ class InsightEngine:
         hf_token = os.getenv("HF_TOKEN")
         if hf_token:
             self.llm_client = InferenceClient(provider="fireworks-ai", api_key=hf_token)
-            self.model = "openai/gpt-oss-120b" #deepseek-ai/DeepSeek-R1-0528
+            self.model = "openai/gpt-oss-120b" 
             print(f"Using LLM model via Fireworks AI: {self.model}")
         else:
             raise ValueError("HF_TOKEN environment variable is not set!")
@@ -77,7 +77,7 @@ class InsightEngine:
                 yield "Error: HF_TOKEN is not configured."
                 return
 
-            print(f"🚦 STEP 1: Processing query: '{question}'")
+            print(f"STEP 1: Processing query: '{question}'")
             query_vector = get_embedding(question)
             if not query_vector:
                 yield "Error: Could not process the query into an embedding."
