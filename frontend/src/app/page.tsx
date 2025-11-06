@@ -5,7 +5,7 @@ import { SignedIn, SignedOut } from '@clerk/nextjs';
 export default function HomePage() {
   return (
     <div className="text-center mt-20">
-      <h1 className="text-4xl font-bold mb-4">Welcome to SPARKS.ai ✨</h1>
+      <h1 className="text-4xl font-bold mb-4">Welcome to InsightGenie 🧞</h1>
       <p className="text-lg text-gray-600 mb-8">
         Get AI-powered insights from customer feedback across the web.
       </p>

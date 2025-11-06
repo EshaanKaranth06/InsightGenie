@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "SPARKS.ai",
+  title: "InsightGenie",
   description: "AI-Powered Customer Insight Delivery",
 };
 
