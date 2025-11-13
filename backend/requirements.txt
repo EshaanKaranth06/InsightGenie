@@ -24,6 +24,7 @@ google-api-python-client
 serpapi
 requests
 httpx # Dependency for API clients
+slowapi
 
 # --- Authentication ---
 clerk-sdk-python
